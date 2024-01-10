@@ -56,7 +56,6 @@ class MultiCamModel(L.LightningModule):
       if augment:
          self.augtrn = T.Compose([T.RandomResizedCrop(self.imsize, scale=(0.95, 1.0), ratio=(0.95,1.05)),
                                   T.Resize(self.imsize),
-                                  T.RandomHorizontalFlip(),
                                   T.ElasticTransform(alpha=100.0),
                                   T.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])])
       self.save_hyperparameters()
