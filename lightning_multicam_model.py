@@ -9,8 +9,9 @@ import torchvision
 from torchvision.models import *
 import lightning as L
 
-from utilities.utils_misc import KNNAccuracy
+from utilities.utils_misc import KNNAccuracy, KNNMetrics
 from utilities.utils_tsne import init_tsne, init_umap, scatter
+# from utilities.utils_matrix import plot_confusion_matrix
 
 class MultiCamModel(L.LightningModule):
    def __init__(self,
@@ -131,13 +132,15 @@ class MultiCamModel(L.LightningModule):
       if mode == 'train' or mode == 'val':
           train_embd = torch.cat(self.embed['train']).numpy()
           train_lbls = torch.cat(self.labels['train']).numpy()
+          show_matrix = False
+          knn_accuracy = KNNAccuracy(train_embd, train_lbls, embd, lbls)
       else:
           source = os.path.join(self.save_path, "train_embed_data_best.npz")
           train_data = np.load(source, allow_pickle=True)
           train_embd = train_data["embeddings"]
           train_lbls = train_data["labels"]
+          knn_accuracy, precision, recall, f1 = KNNMetrics(train_embd, train_lbls, embd, lbls, os.path.join(self.save_path, mode))
 
-      knn_accuracy = KNNAccuracy(train_embd, train_lbls, embd, lbls)
       if mode != 'train':
           print(f"\n{mode.title()} Mode KNNAccuracy: {knn_accuracy} %")
           if mode == 'val' and knn_accuracy > self.best_val_acc:
@@ -146,6 +149,11 @@ class MultiCamModel(L.LightningModule):
               self.best_val_acc = knn_accuracy
 
       self.log_dict({f"{mode}_acc": knn_accuracy})
+      if mode == 'test':
+          self.log_dict({f"{mode}_precision": precision})
+          self.log_dict({f"{mode}_recall": recall})
+          self.log_dict({f"{mode}_f1_score": f1})
+
 
    def on_train_epoch_end(self):
       self._epoch_end(mode='train')
