@@ -62,16 +62,16 @@ def KNNMetrics(train_embeddings, train_labels, test_embeddings, test_labels, des
 
 def plot_confusion_matrix(preds, targets, dest:str):
     num_classes = len(np.unique(targets))
-    labels = [f"Cow {id+1}" for id in range(num_classes)]
+    # labels = [f"Cow {id+1}" for id in range(num_classes)]
+    labels = [id for id in range(1, num_classes+1)]
     multi_cm = confusion_matrix(targets, preds, labels=labels)
-    disp = ConfusionMatrixDisplay(confusion_matrix=multi_cm, display_labels=labels)
-    disp.plot()
-
-    plot.savefig(os.path.join(dest, "Confusion_Matrix.png"))
+    disp = ConfusionMatrixDisplay(confusion_matrix=multi_cm, display_labels=labels).plot()
+    plt.savefig(os.path.join(dest, "Confusion_Matrix.png"))
 
 def additional_metrics(preds, targets, average='weighted'):
     num_classes = len(np.unique(targets))
-    labels = [f"Cow {id+1}" for id in range(num_classes)]
+    # labels = [f"Cow {id+1}" for id in range(num_classes)]
+    labels = [id for id in range(1, num_classes+1)]
     precision = precision_score(predictions, test_labels.ravel(), labels=labels, average=average)
     recall = recall_score(predictions, test_labels.ravel(), labels=labels, average=average)
     f1 = f1_score(predictions, test_labels.ravel(), labels=labels, average=average)
