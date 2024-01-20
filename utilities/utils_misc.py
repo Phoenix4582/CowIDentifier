@@ -1,3 +1,4 @@
+import os
 import matplotlib.pyplot as plt
 import numpy as np
 
@@ -72,9 +73,9 @@ def additional_metrics(preds, targets, average='weighted'):
     num_classes = len(np.unique(targets))
     # labels = [f"Cow {id+1}" for id in range(num_classes)]
     labels = [id for id in range(1, num_classes+1)]
-    precision = precision_score(predictions, test_labels.ravel(), labels=labels, average=average)
-    recall = recall_score(predictions, test_labels.ravel(), labels=labels, average=average)
-    f1 = f1_score(predictions, test_labels.ravel(), labels=labels, average=average)
+    precision = precision_score(preds, targets.ravel(), labels=labels, average=average)
+    recall = recall_score(preds, targets.ravel(), labels=labels, average=average)
+    f1 = f1_score(preds, targets.ravel(), labels=labels, average=average)
     return precision, recall, f1
 
 def fetch_npz_data(path):
