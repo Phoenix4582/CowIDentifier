@@ -23,6 +23,7 @@ class MultiCamModel(L.LightningModule):
                 mining : bool = True,
                 augment : bool = True,
                 save_path: str = "outputs/folder_name",
+                perplexity: int= 25,
                ):
       super().__init__()
       self.lossname = lossname
@@ -51,8 +52,8 @@ class MultiCamModel(L.LightningModule):
       self.best_val_acc = 0
 
       # initialise tsne and umap
-      self.tsne = init_tsne()
-      self.ump = init_umap()
+      self.tsne = init_tsne(perplexity=perplexity)
+      self.ump = init_umap(n_neighbors=perplexity)
 
       if augment:
          self.augtrn = T.Compose([T.RandomResizedCrop(self.imsize, scale=(0.95, 1.0), ratio=(0.95,1.05)),
