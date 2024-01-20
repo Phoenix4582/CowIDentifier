@@ -66,7 +66,10 @@ def plot_confusion_matrix(preds, targets, dest:str):
     # labels = [f"Cow {id+1}" for id in range(num_classes)]
     labels = [id for id in range(1, num_classes+1)]
     multi_cm = confusion_matrix(targets, preds, labels=labels, normalize='all')
-    disp = ConfusionMatrixDisplay(confusion_matrix=multi_cm, display_labels=labels).plot()
+    disp = ConfusionMatrixDisplay(confusion_matrix=multi_cm, display_labels=labels)
+    disp.plot(include_values=False, cmap='plasma')
+    plt.xticks(fontsize=6)
+    plt.yticks(fontsize=6)
     plt.savefig(os.path.join(dest, "Confusion_Matrix.png"))
 
 def additional_metrics(preds, targets, average='weighted'):
