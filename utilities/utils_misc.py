@@ -65,7 +65,7 @@ def plot_confusion_matrix(preds, targets, dest:str):
     num_classes = len(np.unique(targets))
     # labels = [f"Cow {id+1}" for id in range(num_classes)]
     labels = [id for id in range(1, num_classes+1)]
-    multi_cm = confusion_matrix(targets, preds, labels=labels)
+    multi_cm = confusion_matrix(targets, preds, labels=labels, normalize='all')
     disp = ConfusionMatrixDisplay(confusion_matrix=multi_cm, display_labels=labels).plot()
     plt.savefig(os.path.join(dest, "Confusion_Matrix.png"))
 
