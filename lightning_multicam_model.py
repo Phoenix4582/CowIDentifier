@@ -25,6 +25,7 @@ class MultiCamModel(L.LightningModule):
                 save_path: str = "outputs/folder_name",
                 perplexity: int = 25,
                 u_neighbors: int = 25,
+                check_cameras: bool = True,
                ):
       super().__init__()
       self.lossname = lossname
@@ -55,6 +56,9 @@ class MultiCamModel(L.LightningModule):
       # initialise tsne and umap
       self.tsne = init_tsne(perplexity=perplexity)
       self.ump = init_umap(n_neighbors=u_neighbors)
+
+      # Flag for mono/multi-camera mode
+      self.check_cameras = check_cameras
 
       if augment:
          self.augtrn = T.Compose([T.RandomResizedCrop(self.imsize, scale=(0.95, 1.0), ratio=(0.95,1.05)),
@@ -121,15 +125,15 @@ class MultiCamModel(L.LightningModule):
       lbls = torch.cat(self.labels[mode]).numpy()
       cmr  = torch.cat(self.cmra[mode]).numpy()
 
-      # tsne = init_tsne()
       tsne_embed = self.tsne.fit(embd)
+      ump_embed = self.ump.fit_transform(embd)
+      
       scatter(tsne_embed, lbls, f"TSNE-{mode}-label", os.path.join(self.save_path, mode, "tsne_label", f"record-{str(self.current_epoch).zfill(5)}"), file_format="png")
       scatter(tsne_embed, cmr, f"TSNE-{mode}-camera", os.path.join(self.save_path, mode, "tsne_camera", f"record-{str(self.current_epoch).zfill(5)}"), file_format="png")
 
-      # ump = init_umap()
-      ump_embed = self.ump.fit_transform(embd)
-      scatter(ump_embed, lbls, f"UMAP-{mode}-label", os.path.join(self.save_path, mode, "umap_label", f"record-{str(self.current_epoch).zfill(5)}"), file_format="png")
-      scatter(ump_embed, cmr, f"UMAP-{mode}-camera", os.path.join(self.save_path, mode, "umap_camera", f"record-{str(self.current_epoch).zfill(5)}"), file_format="png")
+      if self.check_cameras:
+         scatter(ump_embed, lbls, f"UMAP-{mode}-label", os.path.join(self.save_path, mode, "umap_label", f"record-{str(self.current_epoch).zfill(5)}"), file_format="png")
+         scatter(ump_embed, cmr, f"UMAP-{mode}-camera", os.path.join(self.save_path, mode, "umap_camera", f"record-{str(self.current_epoch).zfill(5)}"), file_format="png")
 
       if mode == 'train' or mode == 'val':
           train_embd = torch.cat(self.embed['train']).numpy()
