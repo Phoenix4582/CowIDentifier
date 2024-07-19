@@ -35,7 +35,7 @@ class MultiCamDailyCows2023(data.Dataset):
     def __init__(self, root, date_pin, transform=None, pseudo=True, pseudo_thr=50):
         self.camera_root_id = root
 
-        # fused folder not implemented yet so root cannot be 0 currently
+        # fused folder as a separate folder named camera_0
         pseudo_root = f'datasets/MultiCamDailyCows2023/Pseudo/camera_{self.camera_root_id}'
         global_root = f'datasets/MultiCamDailyCows2023/Global/camera_{self.camera_root_id}'
         self.selected_root = pseudo_root if pseudo else global_root
