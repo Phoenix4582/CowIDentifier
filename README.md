@@ -1,5 +1,5 @@
 # CowIDentifier
-Individual Cow IDentification part of MultiCamCows2024 Project
+Individual Cow IDentification part of MultiCamCows2024 Project, more info can be found [here](https://phoenix4582.github.io/MultiCamCows2024.github.io/)
 
 # Setup
 We strongly recommend using Anaconda for setting up environment. Once you installed Anaconda, simply type:
