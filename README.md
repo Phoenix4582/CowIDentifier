@@ -1,5 +1,5 @@
 # CowIDentifier
-Individual Cow IDentification part of OpenSetCows2023 Project
+Individual Cow IDentification part of MultiCamCows2024 Project
 
 # Setup
 We strongly recommend using Anaconda for setting up environment. Once you installed Anaconda, simply type:
