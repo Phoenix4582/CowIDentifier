@@ -57,7 +57,7 @@ class MultiCamModel(L.LightningModule):
       self.tsne = init_tsne(perplexity=perplexity)
       self.ump = init_umap(n_neighbors=u_neighbors)
 
-      # Flag for mono/multi-camera mode
+      # Flag for Mono/Multi-camera mode
       self.check_cameras = check_cameras
 
       if augment:
@@ -127,18 +127,17 @@ class MultiCamModel(L.LightningModule):
 
       tsne_embed = self.tsne.fit(embd)
       ump_embed = self.ump.fit_transform(embd)
-      
+
       scatter(tsne_embed, lbls, f"TSNE-{mode}-label", os.path.join(self.save_path, mode, "tsne_label", f"record-{str(self.current_epoch).zfill(5)}"), file_format="png")
-      scatter(tsne_embed, cmr, f"TSNE-{mode}-camera", os.path.join(self.save_path, mode, "tsne_camera", f"record-{str(self.current_epoch).zfill(5)}"), file_format="png")
+      scatter(ump_embed, lbls, f"UMAP-{mode}-label", os.path.join(self.save_path, mode, "umap_label", f"record-{str(self.current_epoch).zfill(5)}"), file_format="png")
 
       if self.check_cameras:
-         scatter(ump_embed, lbls, f"UMAP-{mode}-label", os.path.join(self.save_path, mode, "umap_label", f"record-{str(self.current_epoch).zfill(5)}"), file_format="png")
+         scatter(tsne_embed, cmr, f"TSNE-{mode}-camera", os.path.join(self.save_path, mode, "tsne_camera", f"record-{str(self.current_epoch).zfill(5)}"), file_format="png")
          scatter(ump_embed, cmr, f"UMAP-{mode}-camera", os.path.join(self.save_path, mode, "umap_camera", f"record-{str(self.current_epoch).zfill(5)}"), file_format="png")
 
       if mode == 'train' or mode == 'val':
           train_embd = torch.cat(self.embed['train']).numpy()
           train_lbls = torch.cat(self.labels['train']).numpy()
-          show_matrix = False
           knn_accuracy = KNNAccuracy(train_embd, train_lbls, embd, lbls)
       else:
           source = os.path.join(self.save_path, "train_embed_data_best.npz")

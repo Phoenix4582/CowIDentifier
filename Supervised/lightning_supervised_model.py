@@ -8,6 +8,7 @@ import torchvision.transforms as T
 import torchvision
 from torchvision.models import *
 import lightning as L
+import csv
 
 from utilities.utils_misc import KNNAccuracy, KNNMetrics, additional_metrics, plot_confusion_matrix
 from utilities.utils_tsne import init_tsne, init_umap, scatter
@@ -22,6 +23,7 @@ class MultiCamSupervisedModel(L.LightningModule):
                 imsize: int = 96,
                 augment: bool = True,
                 save_path: str = "outputs/Supervised/folder_name",
+                pretrained_weights: str = None,
                ):
       super().__init__()
       self.imsize = imsize
@@ -53,10 +55,28 @@ class MultiCamSupervisedModel(L.LightningModule):
       ldr = f"self.net = {backbone.lower()}(weights='{ntnme}')"
       print(ldr)
       exec(ldr)
-      self.net.fc = nn.Sequential(self.net.fc, nn.ReLU(), nn.Linear(1000, self.hparams.hidden_dims), nn.ReLU(), nn.Dropout(), nn.Linear(self.hparams.hidden_dims, self.num_classes))
+      if not pretrained_weights:
+          print('No pretrained weights.')
+          self.net.fc = nn.Sequential(self.net.fc, nn.ReLU(), nn.Linear(1000, self.hparams.hidden_dims), nn.ReLU(), nn.Dropout(), nn.Linear(self.hparams.hidden_dims, self.num_classes))
+      else:
+          # ntnme  = backbone+'_Weights.DEFAULT'
+          # ldr = f"self.net = {backbone.lower()}(weights='{ntnme}')"
+          # print(ldr)
+          # exec(ldr)
+          print('Loaded pretrained weights.')
+          self.net.fc = nn.Sequential(self.net.fc, nn.ReLU(), nn.Linear(1000, self.hparams.hidden_dims))
+          checkpoint = torch.load(pretrained_weights)
+          state_dict = checkpoint['state_dict']
+          for key in list(state_dict.keys()):
+              state_dict[key.replace('net.', '')] = state_dict.pop(key)
+          self.net.load_state_dict(state_dict, strict=False)
+          for param in self.net.parameters():
+              param.require_grad = False
+          self.net.fc = nn.Sequential(self.net.fc, nn.ReLU(), nn.Dropout(), nn.Linear(self.hparams.hidden_dims, self.num_classes))
 
    def doloss(self, batch, mode="train"):
       preds = self.net(batch[0])
+
       labels = batch[1] - 1 # CrossEntropyLoss need class id to be [0, num_classes).
       cmras = batch[2]
       # self.cmra[mode].append(cmras.clone().detach().cpu())
@@ -99,13 +119,35 @@ class MultiCamSupervisedModel(L.LightningModule):
       # print(lbls.shape)
       correct = (preds == lbls.ravel()).sum()
       acc = (float(correct) / total) * 100
-      self.log_dict({f"{mode}_acc": acc})
       precision, recall, f1 = additional_metrics(preds, lbls)
-      matrix_path = os.path.join(self.save_path, mode)
-      if not os.path.exists(matrix_path):
-          os.makedirs(matrix_path)
-      plot_confusion_matrix(preds, lbls, matrix_path)
-
+      if mode == "test":
+          with open(os.path.join(self.save_path, f"{mode}_acc.csv"), "a", newline="") as f:
+              writer = csv.writer(f)
+              writer.writerow((acc,))
+              f.close()
+          with open(os.path.join(self.save_path, f"{mode}_precision.csv"), "a", newline="") as f:
+              writer = csv.writer(f)
+              writer.writerow((precision,))
+              f.close()
+          with open(os.path.join(self.save_path, f"{mode}_recall.csv"), "a", newline="") as f:
+              writer = csv.writer(f)
+              writer.writerow((recall,))
+              f.close()
+          with open(os.path.join(self.save_path, f"{mode}_f1.csv"), "a", newline="") as f:
+              writer = csv.writer(f)
+              writer.writerow((f1,))
+              f.close()
+      if mode == "val":
+          with open(os.path.join(self.save_path, f"{mode}_acc.csv"), "a", newline="") as f:
+              writer = csv.writer(f)
+              writer.writerow((acc,))
+              f.close()
+      self.log_dict({f"{mode}_acc": acc})
+      # matrix_path = os.path.join(self.save_path, mode)
+      # if not os.path.exists(matrix_path):
+      #     os.makedirs(matrix_path)
+      # plot_confusion_matrix(preds, lbls, matrix_path)
+      #
       if mode != 'train':
           print(f"\n{mode.title()} Mode Accuracy: {acc} %")
           self.log_dict({f"{mode}_precision": precision})

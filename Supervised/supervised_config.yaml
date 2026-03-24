@@ -9,13 +9,13 @@ trainer:
   logger:
        class_path: TensorBoardLogger
        init_args:
-          save_dir : ./outputs/Supervised/Test_2023_${model.backbone}_dim${model.hidden_dims}_size${model.imsize}/logs/
+          save_dir : ./outputs/Supervised/FUSED/MultiCows_1e3_2023_${model.backbone}_dim${model.hidden_dims}_size${model.imsize}/logs/
           name: ${data.name}
           default_hp_metric: False
   callbacks:
     - class_path: lightning.pytorch.callbacks.ModelCheckpoint
       init_args:
-        dirpath: ./outputs/Supervised/Test_2023_${model.backbone}_dim${model.hidden_dims}_size${model.imsize}/checkpoints/
+        dirpath: ./outputs/Supervised/FUSED/MultiCows_1e3_2023_${model.backbone}_dim${model.hidden_dims}_size${model.imsize}/checkpoints/
         # filename: ckpt_epoch_{epoch:03d}
         filename: ckpt_epoch_best
         monitor: val_acc
@@ -28,10 +28,10 @@ trainer:
     - class_path: lightning.pytorch.callbacks.EarlyStopping
       init_args:
         monitor: val_loss
-        patience: 10
+        patience: 200
         mode: min
   fast_dev_run: false
-  max_epochs: 20
+  max_epochs: 300
   min_epochs: null
   max_steps: -1
   min_steps: null
@@ -60,7 +60,7 @@ trainer:
   barebones: false
   plugins: null
   sync_batchnorm: false
-  reload_dataloaders_every_n_epochs: 0
+  reload_dataloaders_every_n_epochs: 5
   default_root_dir: null
 optimizer:
   class_path: torch.optim.AdamW
@@ -70,17 +70,17 @@ optimizer:
     maximize: false
     foreach: null
 model:
-  backbone: ResNet18
+  backbone: ResNet50
   hidden_dims: 64
   num_classes: 90
   lr: 0.001
-  imsize: 96
+  imsize: 128
   augment: true
-  save_path: ./outputs/Supervised/Test_2023_${model.backbone}_dim${model.hidden_dims}_size${model.imsize}/matrix/
+  save_path: ./outputs/Supervised/FUSED/MultiCows_1e3_2023_${model.backbone}_dim${model.hidden_dims}_size${model.imsize}/matrix/
+  pretrained_weights: null
 data:
   name: MultiCamCows
-  batch_size: 16
+  batch_size: 64
   num_workers: 16
-  train_val_split_ratio: 1.0
   group_by_camera: true
 ckpt_path: null

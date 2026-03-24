@@ -9,14 +9,13 @@ trainer:
   logger:
        class_path: TensorBoardLogger
        init_args:
-          save_dir : ./outputs/Test_2023_${model.backbone}_dim${model.hidden_dims}_size${model.imsize}/logs/
+          save_dir : ./outputs/7DAYS/FUSED/NOFLIP/MultiCowsSGD_1e3_2023_${model.backbone}_dim${model.hidden_dims}_size${model.imsize}/logs/
           name: ${data.name}
           default_hp_metric: False
   callbacks:
     - class_path: lightning.pytorch.callbacks.ModelCheckpoint
       init_args:
-        dirpath: ./outputs/Test_2023_${model.backbone}_dim${model.hidden_dims}_size${model.imsize}/checkpoints/
-        # filename: ckpt_epoch_{epoch:03d}
+        dirpath: ./outputs/7DAYS/FUSED/NOFLIP/MultiCowsSGD_1e3_2023_${model.backbone}_dim${model.hidden_dims}_size${model.imsize}/checkpoints/
         filename: ckpt_epoch_best
         monitor: val_acc
         every_n_epochs: 1
@@ -27,11 +26,11 @@ trainer:
         save_on_train_epoch_end: false
     - class_path: lightning.pytorch.callbacks.EarlyStopping
       init_args:
-        monitor: val_loss
-        patience: 10
+        monitor: val_acc
+        patience: 200
         mode: min
   fast_dev_run: false
-  max_epochs: 3
+  max_epochs: 300
   min_epochs: null
   max_steps: -1
   min_steps: null
@@ -63,25 +62,28 @@ trainer:
   reload_dataloaders_every_n_epochs: 0
   default_root_dir: null
 optimizer:
-  class_path: torch.optim.AdamW
+  class_path: torch.optim.SGD
   init_args:
-    lr: 0.001                 # 0.001
+    lr: 0.001               # 0.001
+    momentum: 0.9
     weight_decay: 1e-4
     maximize: false
-    foreach: null
+    # foreach: null
 model:
-  backbone: ResNet50
-  hidden_dims: 64
+  backbone: ResNet18
+  hidden_dims: 8
   lossname: NTXentLoss()
   lr: 0.001
-  imsize: 96
+  imsize: 192
   mining: true
   augment: true
-  save_path: outputs/Test_2023_${model.backbone}_dim${model.hidden_dims}_size${model.imsize}/embeddings/
+  save_path: outputs/7DAYS/FUSED/NOFLIP/MultiCowsSGD_1e3_2023_${model.backbone}_dim${model.hidden_dims}_size${model.imsize}/embeddings/
+  perplexity: 25
+  u_neighbors: 25
+  check_cameras: true
 data:
   name: MultiCamCows
-  batch_size: 4
+  batch_size: 64
   num_workers: 16
-  train_val_split_ratio: 0.8
   group_by_camera: True
 ckpt_path: null
