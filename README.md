@@ -14,3 +14,12 @@ This repository mostly utilises PyTorch and PyTorch Lightning modules. Additiona
 PyTorch Vision: https://pytorch.org/vision/stable/index.html
 
 PyTorch Lightning: https://lightning.ai/docs/pytorch/stable/cli/lightning_cli.html
+
+# Notes
+Both sections now added KFold capabilities and updated with the training configs of the paper.
+
+## For the supervised section:
+It's recommended to run the 'supervised_main.py' with 'supervised_config.yaml'; or the kfold counterparts ('main_kfold_supervised.py', 'config_kfold_fused.yaml'); over the sole 'main.py' and 'config.yaml' which contains the oldest model pipelines.
+
+## For the self-supervised section:
+The folder now holds all the code needed for standalone training, with KFold capability, instead of code segments that needed to be replaced within the files of Supervised folder, which brings confusion.
