@@ -6,6 +6,7 @@ import json
 import random
 import numpy as np
 from PIL import Image
+from datetime import datetime
 
 # PyTorch
 import torch
@@ -17,15 +18,14 @@ from torchvision import transforms
 from utilities.ioutils import *
 
 class MultiCamCows(data.Dataset):
-    def __init__(self, split, ratio=1.0, group_by_camera=True):
+    def __init__(self, split, group_by_camera=True, subset=True, subset_thr=0.25):
+        if subset:
+            random.seed(datetime.now())
         # Root directory
         self.__root = "datasets/MultiCamCows"
 
         # Split parameter for categorising current duty of dataset(i.e. train/test/val/predict)
         self.__split = split
-
-        # train/val split ratio
-        self.__split_ratio = ratio
 
         self.__transforms = transforms.Compose([transforms.ToTensor(),
                                                 transforms.Resize((256, 256)),
@@ -36,44 +36,57 @@ class MultiCamCows(data.Dataset):
         self.__sorted_files = {}
 
         # The directory containing actual imagery
-        self.__train_images_dir = os.path.join(self.__root, "images/train")
-        self.__test_images_dir = os.path.join(self.__root, "images/test")
+        self.__train_images_dir = os.path.join(self.__root, "images/7days/train")
+        self.__val_images_dir = os.path.join(self.__root, "images/7days/val")
+        self.__test_images_dir = os.path.join(self.__root, "images/7days/test")
 
         # Retrieve the number of classes from these
         self.__train_folders = allFoldersAtDir(self.__train_images_dir)
+        self.__val_folders = allFoldersAtDir(self.__val_images_dir)
         self.__test_folders = allFoldersAtDir(self.__test_images_dir)
         self.__num_classes = len(self.__train_folders)
         self.__num_test_classes = len(self.__test_folders)
 
-        # Create dictionaries of categories: filepaths
-        if self.__split_ratio < 1:
-            train_files = {}
-            val_files = {}
-            for f in self.__train_folders:
-                train_list, val_list = splitFilesAtDirWithExt(f, ".jpg", ratio=self.__split_ratio, group_by_camera=group_by_camera)
-                train_files[os.path.basename(f)] = train_list
-                val_files[os.path.basename(f)] = val_list
-            # train_files = {os.path.basename(f):splitFilesAtDirWithExt(f, ".jpg", ratio=self.__split_ratio, group_by_camera=group_by_camera)[0] for f in self.__train_folders}
-            # val_files = {os.path.basename(f):splitFilesAtDirWithExt(f, ".jpg", ratio=self.__split_ratio, group_by_camera=group_by_camera)[1] for f in self.__train_folders}
-        else:
-            train_files = {os.path.basename(f):allFilesAtDirWithExt(f, ".jpg") for f in self.__train_folders}
+        # # Create dictionaries of categories: filepaths
+        # if self.__split_ratio < 1:
+        #     train_files = {}
+        #     val_files = {}
+        #     for f in self.__train_folders:
+        #         train_list, val_list = splitFilesAtDirWithExt(f, ".jpg", ratio=self.__split_ratio, group_by_camera=group_by_camera)
+        #         train_files[os.path.basename(f)] = train_list
+        #         val_files[os.path.basename(f)] = val_list
+        #     # train_files = {os.path.basename(f):splitFilesAtDirWithExt(f, ".jpg", ratio=self.__split_ratio, group_by_camera=group_by_camera)[0] for f in self.__train_folders}
+        #     # val_files = {os.path.basename(f):splitFilesAtDirWithExt(f, ".jpg", ratio=self.__split_ratio, group_by_camera=group_by_camera)[1] for f in self.__train_folders}
+        # else:
+        train_files = {os.path.basename(f):allFilesAtDirWithExt(f, ".jpg") for f in self.__train_folders}
+        val_files = {os.path.basename(f):allFilesAtDirWithExt(f, ".jpg") for f in self.__val_folders}
         test_files = {os.path.basename(f):allFilesAtDirWithExt(f, ".jpg") for f in self.__test_folders}
 
         self.__sorted_files['train'] = {k:v for (k,v) in train_files.items()}
+        self.__sorted_files['val'] = {k:v for (k,v) in val_files.items()}
         self.__sorted_files['test'] = {k:v for (k,v) in test_files.items()}
 
         train_list = [v for k,v in train_files.items()]
+        val_list = [v for k,v in val_files.items()]
         test_list = [v for k,v in test_files.items()]
-        self.__files['train'] = [item for sublist in train_list for item in sublist]
-        self.__files['test'] = [item for sublist in test_list for item in sublist]
 
-        if self.__split_ratio < 1:
-            val_list = [v for k,v in val_files.items()]
-            self.__sorted_files['val'] = {k:v for (k,v) in val_files.items()}
-            self.__files['val'] = [item for sublist in val_list for item in sublist]
+        self.__files['train'] = [item for sublist in train_list for item in sublist]
+        self.__files['val'] = [item for sublist in val_list for item in sublist]
+
+        if subset:
+            full_test_set = [item for sublist in test_list for item in sublist]
+            test_length = len(full_test_set)
+            self.__files['test'] = [random.choice(full_test_set) for _ in range(int(test_length * subset_thr))]
         else:
-            self.__sorted_files['val'] = {k:v for (k,v) in test_files.items()}
-            self.__files['val'] = [item for sublist in test_list for item in sublist]
+            self.__files['test'] = [item for sublist in test_list for item in sublist]
+
+        # if self.__split_ratio < 1:
+        #     val_list = [v for k,v in val_files.items()]
+        #     self.__sorted_files['val'] = {k:v for (k,v) in val_files.items()}
+        #     self.__files['val'] = [item for sublist in val_list for item in sublist]
+        # else:
+        #     self.__sorted_files['val'] = {k:v for (k,v) in test_files.items()}
+        #     self.__files['val'] = [item for sublist in test_list for item in sublist]
 
     def __len__(self):
         return len(self.__files[self.__split])
@@ -107,3 +120,13 @@ class MultiCamCows(data.Dataset):
         if "_" not in filepath:
             return 0
         return filepath[:-4].split("_")[-1]
+
+    # # Return reversed weights based on dataset quantity. i.e. 1 - 1 / freq(class_id)
+    # def __retrieveSampleWeights(self):
+    #     lengths = [len(item) for _ , item in self.__sorted_files[self.__split].items()]
+    #     reversed_weights = [float(1 - (float(ele) / sum(lengths))) for ele in lengths]
+    #     return reversed_weights
+
+    # get_labels function for TorchSampler Extension functionality
+    def get_labels(self):
+        return [int(self.__retrieveCategoryForFilepath(path)) for path in self.__files[self.__split]]
