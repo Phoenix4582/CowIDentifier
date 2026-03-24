@@ -128,6 +128,95 @@ class MultiCamDailyCowsDataModule(LightningDataModule):
         self.test_set_train_data = self.retrieve_dataset(type='train', pseudo=False)
         self.test_set_test_data = self.retrieve_dataset(type='test', pseudo=False)
 
+        # self.predict_set_train_data = self.retrieve_dataset(type='train', pseudo=False)
+        # self.predict_set_test_data = self.retrieve_dataset(type='test', pseudo=False)
+
+    def train_dataloader(self):
+        # train_sampler = ImbalancedDatasetSampler(self.train_set) if self.__apply_balanced_sample else None
+        # apply_shuffle = False if self.__apply_balanced_sample else True
+        # return DataLoader(self.train_set,
+        #                   sampler=train_sampler,
+        #                   batch_size=self.batch_size,
+        #                   shuffle=apply_shuffle,
+        #                   num_workers=self.num_workers,
+        #                   collate_fn=self.custom_collate_fn)
+        same_date_sampler = SameDateSampler(self.train_set, batch_size=self.batch_size, drop_last=False, random_date_per_epoch=True, shuffle=True)
+        return DataLoader(self.train_set,
+                          batch_sampler=same_date_sampler,
+                          num_workers=self.num_workers,
+                          collate_fn=self.custom_collate_fn)
+
+    def val_dataloader(self):
+        val_sampler = ImbalancedDatasetSampler(self.val_set) if self.__apply_balanced_sample else None
+        return DataLoader(self.val_set,
+                          sampler=val_sampler,
+                          batch_size=self.batch_size,
+                          shuffle=False,
+                          num_workers=self.num_workers,
+                          collate_fn=self.custom_collate_fn)
+
+    def test_dataloader(self):
+        sampler = ImbalancedDatasetSampler(self.test_set) if self.__apply_balanced_sample else None
+        test_mode_train_loader = DataLoader(self.test_set_train_data,
+                          sampler=sampler,
+                          batch_size=self.batch_size,
+                          shuffle=False,
+                          num_workers=self.num_workers,
+                          collate_fn=self.custom_collate_fn)
+        test_mode_test_loader = DataLoader(self.test_set_test_data,
+                          sampler=sampler,
+                          batch_size=self.batch_size,
+                          shuffle=False,
+                          num_workers=self.num_workers,
+                          collate_fn=self.custom_collate_fn)
+        return [test_mode_train_loader, test_mode_test_loader]
+
+
+class KFoldMultiCamDailyCowsDataModule(LightningDataModule):
+    def __init__(self, k:int = 1,
+                       name:str = "MultiCamDailyCows2023",
+                       root:int = 1,
+                       date_pins: list = ['2023Aug14', '2023Aug15', '2023Aug16', '2023Aug17', '2023Aug18', '2023Aug19', '2023Aug20'],
+                       batch_size:int = 16,
+                       num_workers:int = 16,
+                       pseudo_thr:int = 50,
+                       balanced_sample:bool = True):
+        super(KFoldMultiCamDailyCowsDataModule, self).__init__()
+        self.name = name
+        self.root = root
+        self.num_folds = len(date_pins)
+        assert self.num_folds > 0, "Please have valid num_folds"
+        assert 1 <= k <= self.num_folds, "K must be no larger than num_folds"
+        print("---------------------------------------------------------")
+        print(f"Currently working with Fold {k} out of {self.num_folds}")
+        print("---------------------------------------------------------")
+        val_pins = date_pins[self.num_folds-k-1]
+        test_pins = date_pins[self.num_folds-k]
+        train_pins = [date_pin for date_pin in date_pins if date_pin != val_pins and date_pin != test_pins]
+        self.date_pin = {'train': train_pins, 'val': [val_pins], 'test': [test_pins]}
+        self.batch_size = batch_size
+        self.num_workers = num_workers
+        self.pseudo_thr = pseudo_thr
+        self.__apply_balanced_sample = balanced_sample
+        self.custom_collate_fn = custom_collate_fn
+        self.transform = transforms.Compose([transforms.ToTensor(),
+                                                transforms.Resize((256, 256)),
+                                                transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])])
+
+    def retrieve_dataset(self, type, pseudo=True):
+        dataset_prefix = getattr(importlib.import_module(f'datasets.{self.name}.{self.name}'), self.name)
+        return dataset_prefix(root=self.root, date_pin=self.date_pin[type], transform=self.transform, pseudo=pseudo, pseudo_thr=self.pseudo_thr)
+
+    def setup(self, stage):
+        self.train_set = self.retrieve_dataset(type='train')
+        self.val_set = self.retrieve_dataset(type='val')
+
+        self.test_set_train_data = self.retrieve_dataset(type='train', pseudo=False)
+        self.test_set_test_data = self.retrieve_dataset(type='test', pseudo=False)
+
+        # self.predict_set_train_data = self.retrieve_dataset(type='train', pseudo=False)
+        # self.predict_set_test_data = self.retrieve_dataset(type='test', pseudo=False)
+
     def train_dataloader(self):
         # train_sampler = ImbalancedDatasetSampler(self.train_set) if self.__apply_balanced_sample else None
         # apply_shuffle = False if self.__apply_balanced_sample else True

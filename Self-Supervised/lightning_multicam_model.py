@@ -8,6 +8,7 @@ import torchvision.transforms as T
 import torchvision
 from torchvision.models import *
 import lightning as L
+import csv
 
 from utilities.utils_misc import KNNClusterConsistency, KNNClusterPerformance
 from utilities.utils_tsne import init_tsne, init_umap, scatter, scatter_highlight
@@ -125,55 +126,100 @@ class MultiCamModel(L.LightningModule):
           lbls = torch.cat(self.labels[mode]).numpy()
           # cmr  = torch.cat(self.cmra[mode]).numpy()
 
-          tsne = init_tsne()
-          tsne_embed = tsne.fit(embd)
-          scatter(tsne_embed, lbls, f"TSNE-{mode}-label", os.path.join(self.save_path, mode, "tsne_label", f"record-{str(self.current_epoch).zfill(5)}"), file_format="png")
+          # tsne = init_tsne()
+          # tsne_embed = tsne.fit(embd)
+          # scatter(tsne_embed, lbls, f"TSNE-{mode}-label", os.path.join(self.save_path, mode, "tsne_label", f"record-{str(self.current_epoch).zfill(5)}"), file_format="png")
           # scatter(tsne_embed, cmr, f"TSNE-{mode}-camera", os.path.join(self.save_path, mode, "tsne_camera", f"record-{str(self.current_epoch).zfill(5)}"), file_format="png")
 
-          ump = init_umap()
-          ump_embed = ump.fit_transform(embd)
-          scatter(ump_embed, lbls, f"UMAP-{mode}-label", os.path.join(self.save_path, mode, "umap_label", f"record-{str(self.current_epoch).zfill(5)}"), file_format="png")
+          # ump = init_umap()
+          # ump_embed = ump.fit_transform(embd)
+          # scatter(ump_embed, lbls, f"UMAP-{mode}-label", os.path.join(self.save_path, mode, "umap_label", f"record-{str(self.current_epoch).zfill(5)}"), file_format="png")
           # scatter(ump_embed, cmr, f"UMAP-{mode}-camera", os.path.join(self.save_path, mode, "umap_camera", f"record-{str(self.current_epoch).zfill(5)}"), file_format="png")
 
-          cluster_performance, silhouette, vrc, dbs = KNNClusterPerformance(embd, lbls)
-          print(f"\n{mode.title()} Mode Cluster Performance: {cluster_performance*100:.3f}%")
+          acc, cluster_performance, silhouette, vrc, dbs, precision, recall, f1_score = KNNClusterPerformance(embd, lbls)
+          print(f"\n{mode.title()} Mode Accuracy: {acc:.3f}%")
+          print(f"{mode.title()} Mode Cluster Performance: {cluster_performance:.3f}%")
           print(f"{mode.title()} Mode Silhouette Score: {silhouette:.5f}")
           print(f"{mode.title()} Mode Variance Ratio Criterion: {vrc:.5f}")
           print(f"{mode.title()} Mode Davies-Bouldin score: {dbs:.5f}")
+          print(f"{mode.title()} Mode Precision: {precision:.5f}")
+          print(f"{mode.title()} Mode Recall: {recall:.5f}")
+          print(f"{mode.title()} Mode F1-score: {f1_score:.5f}")
+
+          if mode == 'val':
+              with open(os.path.join(self.save_path, "val_accs.csv"), "a", newline="") as f:
+                  writer = csv.writer(f)
+                  writer.writerow((acc,))
+                  f.close()
+              with open(os.path.join(self.save_path, "val_precision.csv"), "a", newline="") as f:
+                  writer = csv.writer(f)
+                  writer.writerow((precision,))
+                  f.close()
+              with open(os.path.join(self.save_path, "val_recall.csv"), "a", newline="") as f:
+                  writer = csv.writer(f)
+                  writer.writerow((recall,))
+                  f.close()
+              with open(os.path.join(self.save_path, "val_f1.csv"), "a", newline="") as f:
+                  writer = csv.writer(f)
+                  writer.writerow((f1_score,))
+                  f.close()
 
       elif mode == 'test':
           embd_base = torch.cat(self.embed[f'{mode}_base']).numpy()
           lbls_base = torch.cat(self.labels[f'{mode}_base']).numpy()
           embd_target = torch.cat(self.embed[f'{mode}_target']).numpy()
           lbls_target = torch.cat(self.labels[f'{mode}_target']).numpy()
-          print(f"\n{mode.title()} Mode")
-          for sub_name in ['base', 'target']:
-              tsne = init_tsne()
-              ump = init_umap()
-              embd = embd_base if sub_name == 'base' else embd_target
-              lbls = lbls_base if sub_name == 'base' else lbls_target
-              mask = KNNClusterPerformance(embd, lbls, return_pred_index=True)
-              tsne_embed = tsne.fit(embd)
-              scatter(tsne_embed, lbls, f"TSNE-{mode}-label-{sub_name}", os.path.join(self.save_path, f"{mode}_{sub_name}", "tsne_label", f"record-{str(self.current_epoch).zfill(5)}"), file_format="png")
-              scatter_highlight(tsne_embed, lbls, mask, f"TSNE-{mode}-label-{sub_name}", os.path.join(self.save_path, f"{mode}_{sub_name}", "tsne_label", f"record-{str(self.current_epoch).zfill(5)}-highlight"), file_format="png")
-              ump_embed = ump.fit_transform(embd)
-              scatter(ump_embed, lbls, f"UMAP-{mode}-label-base-{sub_name}", os.path.join(self.save_path, f"{mode}_{sub_name}", "umap_label", f"record-{str(self.current_epoch).zfill(5)}"), file_format="png")
-              scatter_highlight(ump_embed, lbls, mask, f"UMAP-{mode}-label-base-{sub_name}", os.path.join(self.save_path, f"{mode}_{sub_name}", "umap_label", f"record-{str(self.current_epoch).zfill(5)}-highlight"), file_format="png")
-              cluster_performance, silhouette, vrc, dbs = KNNClusterPerformance(embd, lbls)
-              print(f"\n{sub_name.title()} Mode Cluster Performance: {cluster_performance*100:.3f}%")
-              print(f"{sub_name.title()} Mode Silhouette Score: {silhouette:.5f}")
-              print(f"{sub_name.title()} Mode Variance Ratio Criterion: {vrc:.5f}")
-              print(f"{sub_name.title()} Mode Davies-Bouldin score: {dbs:.5f}")
 
           acc, acc_c, cluster_ari, mutual = KNNClusterConsistency(embd_base, lbls_base, embd_target, lbls_target)
-          print(f"\n{mode.title()} Mode Raw Accuracy: {acc:.5f}%", flush=True)
-          print(f"{mode.title()} Mode Scored Accuracy: {acc_c:.5f}%", flush=True)
-          print(f"{mode.title()} Mode Cluster Consistency(ARI): {cluster_ari:.5f}", flush=True)
-          print(f"{mode.title()} Mode Mutual Information: {mutual:.5f}", flush=True)
-          self.log_dict({f"{mode}_acc": acc})
-          self.log_dict({f"{mode}_acc_c": acc_c})
-          self.log_dict({f"{mode}_ari": cluster_ari})
-          self.log_dict({f"{mode}_mutual": mutual})
+          # print(f"\n{mode.title()} Mode Raw Accuracy: {acc:.5f}%", flush=True)
+          # print(f"{mode.title()} Mode Scored Accuracy: {acc_c:.5f}%", flush=True)
+          # print(f"{mode.title()} Mode Cluster Consistency(ARI): {cluster_ari:.5f}", flush=True)
+          # print(f"{mode.title()} Mode Mutual Information: {mutual:.5f}", flush=True)
+          # self.log_dict({f"{mode}_acc": acc})
+          # self.log_dict({f"{mode}_acc_c": acc_c})
+          # self.log_dict({f"{mode}_ari": cluster_ari})
+          # self.log_dict({f"{mode}_mutual": mutual})
+
+          with open(os.path.join(self.save_path, "test_accs.csv"), "a", newline="") as f:
+              writer = csv.writer(f)
+              writer.writerow((acc,))
+              f.close()
+
+          # print(f"\n{mode.title()} Mode")
+          # for sub_name in ['base', 'target']:
+          #     tsne = init_tsne()
+          #     ump = init_umap()
+          #     embd = embd_base if sub_name == 'base' else embd_target
+          #     lbls = lbls_base if sub_name == 'base' else lbls_target
+          #     mask = KNNClusterPerformance(embd, lbls, return_pred_index=True)
+          #     tsne_embed = tsne.fit(embd)
+          #     main_title = f"TSNE-{mode}-label-{sub_name} (KNN={acc:.2f}%)"
+          #     sub_title = ','.join(f'{k}:{v}' for k,v in self._hparams.items() if k != 'save_path')
+          #     scatter(tsne_embed, lbls, main_title, sub_title, os.path.join(self.save_path, f"{mode}_{sub_name}", "tsne_label", f"record-{str(self.current_epoch).zfill(5)}"), file_format="svg")
+          #     scatter_highlight(tsne_embed, lbls, mask, main_title, sub_title, os.path.join(self.save_path, f"{mode}_{sub_name}", "tsne_label", f"record-{str(self.current_epoch).zfill(5)}-comp"), file_format="svg")
+          #     scatter_highlight(tsne_embed, lbls, mask, main_title, sub_title, os.path.join(self.save_path, f"{mode}_{sub_name}", "tsne_label", f"record-{str(self.current_epoch).zfill(5)}-highlight"), file_format="svg", highlight_center=True)
+          #
+          #     scatter(tsne_embed, lbls, None, None, os.path.join(self.save_path, f"{mode}_{sub_name}", "tsne_label", f"record-NoTitle-{str(self.current_epoch).zfill(5)}"), file_format="svg")
+          #     scatter_highlight(tsne_embed, lbls, mask, None, None, os.path.join(self.save_path, f"{mode}_{sub_name}", "tsne_label", f"record-NoTitle-{str(self.current_epoch).zfill(5)}-comp"), file_format="svg")
+          #     scatter_highlight(tsne_embed, lbls, mask, None, None, os.path.join(self.save_path, f"{mode}_{sub_name}", "tsne_label", f"record-NoTitle-{str(self.current_epoch).zfill(5)}-highlight"), file_format="svg", highlight_center=True)
+          #
+          #     ump_embed = ump.fit_transform(embd)
+          #     main_title = f"UMAP-{mode}-label-{sub_name} (KNN={acc:.2f}%)"
+          #     scatter(ump_embed, lbls, main_title, sub_title, os.path.join(self.save_path, f"{mode}_{sub_name}", "umap_label", f"record-{str(self.current_epoch).zfill(5)}"), file_format="svg")
+          #     scatter_highlight(ump_embed, lbls, mask, main_title, sub_title, os.path.join(self.save_path, f"{mode}_{sub_name}", "umap_label", f"record-{str(self.current_epoch).zfill(5)}-comp"), file_format="svg")
+          #     scatter_highlight(ump_embed, lbls, mask, main_title, sub_title, os.path.join(self.save_path, f"{mode}_{sub_name}", "umap_label", f"record-{str(self.current_epoch).zfill(5)}-highlight"), file_format="svg", highlight_center=True)
+          #
+          #     scatter(ump_embed, lbls, None, None, os.path.join(self.save_path, f"{mode}_{sub_name}", "umap_label", f"record-NoTitle-{str(self.current_epoch).zfill(5)}"), file_format="svg")
+          #     scatter_highlight(ump_embed, lbls, mask, None, None, os.path.join(self.save_path, f"{mode}_{sub_name}", "umap_label", f"record-NoTitle-{str(self.current_epoch).zfill(5)}-comp"), file_format="svg")
+          #     scatter_highlight(ump_embed, lbls, mask, None, None, os.path.join(self.save_path, f"{mode}_{sub_name}", "umap_label", f"record-NoTitle-{str(self.current_epoch).zfill(5)}-highlight"), file_format="svg", highlight_center=True)
+          #
+          #     cluster_performance, silhouette, vrc, dbs = KNNClusterPerformance(embd, lbls)
+          #     print(f"\n{sub_name.title()} Mode Cluster Performance: {cluster_performance*100:.3f}%")
+          #     print(f"{sub_name.title()} Mode Silhouette Score: {silhouette:.5f}")
+          #     print(f"{sub_name.title()} Mode Variance Ratio Criterion: {vrc:.5f}")
+          #     print(f"{sub_name.title()} Mode Davies-Bouldin score: {dbs:.5f}")
+
+
       # if mode == 'train' or mode == 'val':
       #     train_embd = torch.cat(self.embed['train']).numpy()
       #     train_lbls = torch.cat(self.labels['train']).numpy()
