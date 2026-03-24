@@ -19,7 +19,13 @@ PyTorch Lightning: https://lightning.ai/docs/pytorch/stable/cli/lightning_cli.ht
 Both sections now added KFold capabilities and updated with the training configs of the paper.
 
 ## For the supervised section:
+This is a multi-class classifier pipeline.
+
 It's recommended to run the 'supervised_main.py' with 'supervised_config.yaml'; or the kfold counterparts ('main_kfold_supervised.py', 'config_kfold_fused.yaml'); over the sole 'main.py' and 'config.yaml' which contains the oldest model pipelines.
 
 ## For the self-supervised section:
+This is a contrastive-learning pipeline.
+
 The folder now holds all the code needed for standalone training, with KFold capability, instead of code segments that needed to be replaced within the files of Supervised folder, which brings confusion.
+
+From the MultiCamDailyCows2023.py, the image contents need to be filled accordingly with the file hierarchy, with 'self.camera_root_id' representing the specific camera, or 0 for all cameras.
